@@ -10,8 +10,8 @@ var app = require("express")(),
 
 app.get('/thumbnailer', function(req, res, next) {
 	var thumbnailer = new StlThumbnailer({
-		url: req.query.url,					    // url OR filePath must be supplied, but not both
-		filePath: "...",                // load file from filesystem
+		url: req.query.url,		// url OR filePath must be supplied, but not both
+		//filePath: "...",              // load file from filesystem
 		requestThumbnails: [
 			{
 				width: 500,
@@ -39,10 +39,12 @@ app.listen(3000, function () {
 ```
 
 Test your thumbnailer web-app by running "node index.js" and navigating to this url in your browser:
+
 http://localhost:3000/thumbnailer?url=http://www.instructables.com/files/orig/F0Q/U1DI/IY4Q5LSH/F0QU1DIIY4Q5LSH.stl
 
 You should see this in your browser:
-![Alt text](http://www.instructables.com/files/orig/FK0/HZ6E/IY4Q8PHB/FK0HZ6EIY4Q8PHB.png "Bottle Lock - Part 1")
+
+![Render Output](http://www.instructables.com/files/orig/FK0/HZ6E/IY4Q8PHB/FK0HZ6EIY4Q8PHB.png "Render Output")
 
 #### Thumbnail Configuration
 ```requestThumbnails``` is an array of thumbnail configuration options, most of which are optional. The only required parameters are ```width``` and ```height```. The STL Object will be centered in the frame, and the frame will be chosen to make the objects fit. You can specify the angle of the camera as a vector (which will be normalized), but if left as the default a "front" view from slightly above will be chosen.
