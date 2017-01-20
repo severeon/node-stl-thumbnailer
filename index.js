@@ -13,11 +13,11 @@ require("./threejs-extras/STLLoader.js");
 function StlThumbnailer(options){
     // we need a url or a filePath to get started
     var url = options.url, 
-        path = options.filePath,
+        filePath = options.filePath,
         that=this,
         jobs;
-    if (    (typeof url !== "string" && typeof path !== "string") || 
-            (typeof url === "string" && typeof path === "string") 
+    if (    (typeof url !== "string" && typeof filePath !== "string") || 
+            (typeof url === "string" && typeof filePath === "string") 
         ) {
             throw new Error("StlThumbnailer must be initialized with either a url or filePath, but not both.");
         }
@@ -37,10 +37,10 @@ function StlThumbnailer(options){
     }
 
     if (url) {
-        this.loadFromUrl(url)
+        return this.loadFromUrl(url)
             .then(process);
     } else {
-        this.loadFromFile(filePath)
+        return this.loadFromFile(filePath)
             .then(process);
     }
 }
@@ -51,7 +51,7 @@ StlThumbnailer.prototype.processJobs = function(jobs){
         thumbnails = _.map(jobs,function(job){
             return that.processThumbnail(job);
         });
-
+        
     return Promise.all(thumbnails);
 }
 
@@ -92,34 +92,32 @@ StlThumbnailer.prototype.validateThumbnailRequest = function(thumbnail){
     if (typeof thumbnail.width !== "number") throw new Error("Please specify a thumbnail width");
     if (typeof thumbnail.height !== "number") throw new Error("Please specify a thumbnail width");
 
-    var defaults = {
+    var defaults = this.getDefaults();
+
+    return _.extend(_.clone(defaults),thumbnail);
+}
+
+StlThumbnailer.prototype.getDefaults = function(){
+    return {
         cameraAngle: [10,50,100],         // optional: specify the angle of the view for thumbnailing. This is the camera's position vector, the opposite of the direction the camera is looking.
         showMinorEdges: true,             // optional: show all edges lightly, even ones on ~flat faces
-        metallicEffect: false,            // optional: some models, particularly those with non-flat surfaces or very high-poly models will look good with this environment map
+        metallicOpacity: 0,               // optional: some models, particularly those with non-flat surfaces or very high-poly models will look good with this environment map
         enhanceMajorEdges: true,          // optional: major edges will appear more boldly than minor edges
         shadeNormalsOpacity: 0.4,         // optional: faces will be shaded lightly by their normal direction
         backgroundColor: 0xffffff,        // optional: background color (RGB) for the rendered image
         baseOpacity: 0.7,                 // optional: translucency of the base material that lets you see through it
         baseColor: 0xffffff,              // optional: base color
-        baseLineweight: 1.0,              // optional: lineweights will scale to image size, but this serves as a base for that scaling. Larger numbers = heavier lineweights
+        baseLineweight: 0.7,              // optional: lineweights will scale to image size, but this serves as a base for that scaling. Larger numbers = heavier lineweights
         lineColor: 0x000000               // optional: color of the linework
-    }
-
-    return _.extend(_.clone(defaults),thumbnail);
+    };
 }
 
 StlThumbnailer.prototype.processThumbnail = function(thumbnailSpec){
     // Return a promise of a canvas with the thumbnail
+    var that = this;
+
     return new Promise(function(resolve,reject){
         try {
-            // Prepare the scene, renderer, and camera
-            var width = thumbnailSpec.width,
-                height = thumbnailSpec.height,
-                camera = new THREE.PerspectiveCamera(30, width / height, 1, 1000),
-                scene = new THREE.Scene(),
-                renderer = new THREE.CanvasRenderer(),
-                geometry = that.getGeometry();
-
             // Very hacky to use the global here, but I need a few methods that aren't there yet and they include the width and height of the canvas
             global.document = {
                 createElement: function (tag) {
@@ -134,15 +132,23 @@ StlThumbnailer.prototype.processThumbnail = function(thumbnailSpec){
                 }
             };
 
+            // Prepare the scene, renderer, and camera
+            var width = thumbnailSpec.width,
+                height = thumbnailSpec.height,
+                camera = new THREE.PerspectiveCamera(30, width / height, 1, 1000),
+                scene = new THREE.Scene(),
+                renderer = new THREE.CanvasRenderer(),
+                geometry = that.getGeometry();
+
             // Configure renderer
             renderer.setSize(width, height, false)
             renderer.setClearColor( 0xffffff, 1 );
 
             // Configure camera with user-set position, then move it in-or-out depending on
             // the size of the model that needs to display
-            camera.position.x = 10;
-            camera.position.y = 50;
-            camera.position.z = 100 
+            camera.position.x = thumbnailSpec.cameraAngle[0];
+            camera.position.y = thumbnailSpec.cameraAngle[1];
+            camera.position.z = thumbnailSpec.cameraAngle[2];
             camera.lookAt(new THREE.Vector3(0,0,0));
 
             // (re)Position the camera
@@ -156,10 +162,10 @@ StlThumbnailer.prototype.processThumbnail = function(thumbnailSpec){
 
             // Get materials according to requested characteristics of the output render
             // TODO: Blending Modes?
-            scene.add( that.getMetallicMesh(geometry, 0.5) );
-            scene.add( that.getBasicMesh(geometry, 0.7, 0xffffff ) );
-            scene.add( that.getNormalMesh(geometry, 0.4) );        
-            scene.add( that.getEdgeLine(geometry, 0.5, 0x000000) );
+            if (thumbnailSpec.metallicOpacity > 0) scene.add( that.getMetallicMesh(geometry, thumbnailSpec.metallicOpacity) );
+            if (thumbnailSpec.baseOpacity > 0)scene.add( that.getBasicMesh(geometry, thumbnailSpec.baseOpacity, thumbnailSpec.baseColor ) );
+            if (thumbnailSpec.shadeNormalsOpacity > 0)scene.add( that.getNormalMesh(geometry, thumbnailSpec.shadeNormalsOpacity) );        
+            if (thumbnailSpec.enhanceMajorEdges > 0)scene.add( that.getEdgeLine(geometry, thumbnailSpec.baseLineweight, thumbnailSpec.lineColor) );
 
             renderer.render(scene, camera);
             resolve(renderer.domElement);
@@ -221,7 +227,6 @@ StlThumbnailer.prototype.loadTexture = function(path){
     var isJPEG = jpegPath.search( /\.(jpg|jpeg)$/ ) > 0 || url.search( /^data\:image\/jpeg/ ) === 0;
 
     var textureImage = fs.readFileSync(jpegPath);
-    if (err) throw err;
     var img = new Canvas.Image;
     img.src = textureImage;
 
