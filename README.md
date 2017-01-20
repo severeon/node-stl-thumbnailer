@@ -2,9 +2,10 @@
 Nodejs thumbnailing service for 3D STL files. Creates beautifully rendered png and jpeg output server-side with no GPU from ASCII and Binary STL's.
 
 ## Demo web-based thumbnail service
-The code below creates a simple express-based web service that accepts urls of public-on-the-internet STLs, and returns default 
+The code below creates a simple express-based web service that accepts the url of a public-on-the-internet STL, and responds with a 500x500 PNG representation of that STL. 
 
 ```javascript
+// index.js
 var StlThumbnailer = require('node-stl-thumbnailer');
 var app = require("express")(),
 
