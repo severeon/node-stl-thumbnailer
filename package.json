@@ -1,6 +1,6 @@
 {
   "name": "node-stl-thumbnailer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Nodejs thumbnailing service for 3D STL files. Creates beautifully rendered png and jpeg output server-side with no GPU from ASCII and Binary STL's.",
   "main": "index.js",
   "scripts": {
