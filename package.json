@@ -32,5 +32,11 @@
   "bugs": {
     "url": "https://github.com/instructables/node-stl-thumbnailer/issues"
   },
-  "homepage": "https://github.com/instructables/node-stl-thumbnailer#readme"
+  "homepage": "https://github.com/instructables/node-stl-thumbnailer#readme",
+  "dependencies": {
+    "canvas": "^1.6.2",
+    "lodash": "^4.17.4",
+    "request": "^2.79.0",
+    "three": "^0.84.0"
+  }
 }
